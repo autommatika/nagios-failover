@@ -13,9 +13,10 @@ CMS (configuration Management System - puppet,chef or cfengine)
 I have used puppet and used the recursive folder plugin to push all the actual cfg files to nagios nodes:
 
   $objects="/usr/local/nagios/etc/objects"
-        $gta_objects="$objects/company"
+  
+        $company_objects="$objects/company"
 
-        file { "$gta_objects":
+        file { "$company_objects":
                 ensure => directory, # so make this a directory
                 recurse => true, # enable recursive directory management
                 purge => true, # purge all unmanaged junk
