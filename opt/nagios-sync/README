@@ -1,0 +1,21 @@
+# /opt/nagios-sync is required by all nagios users  - this is a local folder that is synchronised using unison protocol 
+
+# /opt/nagios-sync/status.log - This is the status file used by  nagios-failover.sh to log an entry when nagios host a  takes over nagios host b
+# It it used to calculate if configuration needs to be set back when nagios host b is back up and running
+
+
+# /opt/nagios-sync/config_backup - this folder is where the actual /etc/nagios/nagios.cfg is backed up to pre any config additions to existing file
+# When a failed nagios host is back up, the backed up config is returned to the relevant host that took on the task of doing additional monitoring.
+
+# The status.log when updated by script will contain 3 items:
+# prod longmon01a 31713
+# Environment Hostname random_id
+# 1. Environment which in future will be actual data centre 
+# 2. Hostname currently taken over that environment 
+# 3. Random id which is the id added to the nagios.cfg backed up file
+# With these logical values it can safely return the correct config file and ensure that only one of the many nagios servers is the only host to take over 
+
+
+# There is also a master file in --> /etc/nagios/nagios.cfg.master
+# The script will use this file if it can not map /opt/nagios-sync/config_backup/nagios.cfg.RANDOM_ID
+# Please ensure you keep /etc/nagios/nagios.cfg.master the same as /etc/nagios/nagios.cfg on a regular basis
