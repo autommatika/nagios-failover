@@ -12,8 +12,9 @@ CMS (configuration Management System - puppet,chef or cfengine)
 
 I have used puppet and used the recursive folder plugin to push all the actual cfg files to nagios nodes:
 
-  $objects="/usr/local/nagios/etc/objects"
   
+  
+        $objects="/usr/local/nagios/etc/objects"
         $company_objects="$objects/company"
 
         file { "$company_objects":
@@ -33,10 +34,10 @@ so inside:
 files/company I have currently two data centres:
 in each of these data centres
 
-files/company/datacentre1
-- files/company/datacentre1/prod
-  -- files/company/datacentre1/prod/hosts
-  -- files/company/datacentre1/prod/services
+    files/company/datacentre1
+       - files/company/datacentre1/prod
+          -- files/company/datacentre1/prod/hosts
+          -- files/company/datacentre1/prod/services
 
 and so on
 
@@ -45,16 +46,16 @@ on my nagios 3.5 servers I have defined the path to each datacentre:
 
 Nagios server 1
 
-# Datacentre1 servers - services
-cfg_dir=/etc/nagios/objects/company/datacentre1
+     # Datacentre1 servers - services
+     cfg_dir=/etc/nagios/objects/company/datacentre1
 
 
 
 
 Nagios server 2
 
-# Datacentre1 servers - services
-cfg_dir=/etc/nagios/objects/company/datacentre2
+     # Datacentre1 servers - services
+     cfg_dir=/etc/nagios/objects/company/datacentre2
 
 
 Nagios will then read all the files within the sub folders of each datacentre  recursivly on each nagios host... (this simplify definition of each config file etc and makes it a lot easier to script this solution.
@@ -75,17 +76,19 @@ yum install unison or apt-get install unison
 
 In the script I have defined /opt/nagios-sync
 
-mkdir /opt/nagios-sync
-mkdir /opt/nagios-sync/config_backup
-touch /opt/nagios-sync/status.log
-chown -R nagios:nagois /opt/nagios-sync
+    mkdir /opt/nagios-sync
+    mkdir /opt/nagios-sync/config_backup
+    touch /opt/nagios-sync/status.log
+    chown -R nagios:nagois /opt/nagios-sync
 
 
 
 3. Nagios user with sudoers access to restart nagios and access files in /opt/nagois-sync
 sudo -i 
+
 visudo
-%nagios ALL = NOPASSWD: /etc/init.d/nagios
+
+nagios ALL = NOPASSWD: /etc/init.d/nagios
 
 :wq
 
@@ -99,7 +102,7 @@ visudo
 5. in /etc/nagios/nagios.cfg on all hosts you will need to add:
 under the main configuration loading up current data centres
 
-# AUTOMATION ADD HERE
+     # AUTOMATION ADD HERE
 
 
 
