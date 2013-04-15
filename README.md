@@ -1,8 +1,7 @@
 nagios-failover
 ===============
 
-script to failover  nagios servers if and when their down - automtically done via bash script
-agios fail over script is a power bash script that will require some ground work to be done in order to achieve the end result of each nagios server looking out for one another.
+script to failover  nagios servers if and when their down - automtically done via bash fail over script that will require some ground work to be done in order to achieve the end result of each nagios server looking out for one another.
  
 
 I have also done a few other things
