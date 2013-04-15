@@ -8,7 +8,7 @@
 # When a failed nagios host is back up, the backed up config is returned to the relevant host that took on the task of doing additional monitoring.
 
 # The status.log when updated by script will contain 3 items:
-# prod longmon01a 31713
+# prod nagios_server1 31713
 # Environment Hostname random_id
 # 1. Environment which in future will be actual data centre 
 # 2. Hostname currently taken over that environment 
