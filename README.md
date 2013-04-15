@@ -5,12 +5,16 @@ script to failover  nagios servers if and when their down - automtically done vi
  
 
 I have also done a few other things
+
+
 cd /etc/;
 
 ln -s /usr/local/nagios/etc  ./nagios
 
 cd /etc/nagios;
+
 ln -s  /usr/local/nagios/libexec ./plugins
+
 
 
 Requirements. 
