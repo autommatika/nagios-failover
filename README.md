@@ -25,8 +25,8 @@ CMS (configuration Management System - puppet,chef or cfengine)
 
 I have used puppet and used the recursive folder plugin to push all the actual cfg files to nagios nodes:
 
-## You could use the unison protocol and add /usr/local/nagios/etc/objects/$company as a folder to also be synchronised and bypass all this CMS requirements.
-## You would need to move :
+# You could use the unison protocol and add /usr/local/nagios/etc/objects/$company as a folder to also be synchronised and bypass all this CMS requirements.
+# You would need to move :
 
        commands.cfg
        admin.cfg
