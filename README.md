@@ -25,8 +25,8 @@ CMS (configuration Management System - puppet,chef or cfengine)
 
 I have used puppet and used the recursive folder plugin to push all the actual cfg files to nagios nodes:
 
-# You could use the unison protocol and add /usr/local/nagios/etc/objects/$company as a folder to also be synchronised and bypass all this CMS requirements.
-# You would need to move :
+# Unison configuration :
+You could use the unison protocol and add /usr/local/nagios/etc/objects/$company as a folder to also be synchronised and bypass all this CMS requirements. You would need to move :
 
        commands.cfg
        admin.cfg
@@ -34,6 +34,10 @@ I have used puppet and used the recursive folder plugin to push all the actual c
        templates.cfg
        to :  /usr/local/nagios/etc/objects/$company  and update the reference in nagios.cfg accordingly
        
+Within the script update and  move the sync_path variable  below $company variable:
+      SYNC_PATH="/opt/nagios-sync /usr/local/nagios/etc/objects/$company"
+       
+
        
 # CMS Way puppet config
   
@@ -53,10 +57,8 @@ I have used puppet and used the recursive folder plugin to push all the actual c
                 source => "puppet:///modules/nagios/company",
         }
 
-
-so inside:
-files/company I have currently two data centres:
-in each of these data centres
+# Recursive company folder 
+so inside: files/company I have currently two data centres in each of these data centres:
 
     files/company/datacentre1
        - files/company/datacentre1/prod
@@ -89,21 +91,13 @@ in each of these data centres
      
      
      
-and so on
+and so on....  I have defined the path to each datacentre in the nagios.cfg:
 
-
-on my nagios 3.5 servers I have defined the path to each datacentre:
-
-Nagios server 1
-
+# Nagios server 1
      # Datacentre1 servers - services
      cfg_dir=/etc/nagios/objects/company/datacentre1
 
-
-
-
-Nagios server 2
-
+# Nagios server 2
      # Datacentre1 servers - services
      cfg_dir=/etc/nagios/objects/company/datacentre2
 
@@ -112,8 +106,6 @@ Nagios will then read all the files within the sub folders of each datacentre  r
 
 
 So once you have puppet pushing out the configuration which in short all nagios hosts have all the configrations but only load up the relevant datacentre folder for what it is supposed to monitor:
-
-
 
 
 
