@@ -25,6 +25,17 @@ CMS (configuration Management System - puppet,chef or cfengine)
 
 I have used puppet and used the recursive folder plugin to push all the actual cfg files to nagios nodes:
 
+## You could use the unison protocol and add /usr/local/nagios/etc/objects/$company as a folder to also be synchronised and bypass all this CMS requirements.
+## You would need to move :
+
+       commands.cfg
+       admin.cfg
+       timeperiods.cfg
+       templates.cfg
+       to :  /usr/local/nagios/etc/objects/$company  and update the reference in nagios.cfg accordingly
+       
+       
+# CMS Way puppet config
   
   
         $objects="/usr/local/nagios/etc/objects"
@@ -52,6 +63,32 @@ in each of these data centres
           -- files/company/datacentre1/prod/hosts
           -- files/company/datacentre1/prod/services
 
+     pwd
+     /usr/local/nagios/etc/objects
+     
+     tree
+     .
+     |-- admin.cfg
+     |-- commands.cfg
+     |-- generic-host.cfg
+     |-- generic-service.cfg
+     |-- company_folder
+     |   |-- README
+     |   |-- datacentre1
+     |   |   |-- development
+     |   |   |   |-- hosts
+     |   |   |   |   `-- development-servers.cfg
+     |   |   |   `-- services
+     |   |   |       |-- development-sources.cfg
+     |   |   |       `-- generic-development.cfg
+     |   |   |-- uat
+     |   |   |   |-- hosts
+     |   |   |   |   `-- uat-servers.cfg
+     |   |   |   `-- services
+     |   |   |       |-- apache-uat.cfg
+     
+     
+     
 and so on
 
 
