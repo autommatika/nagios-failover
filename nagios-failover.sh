@@ -41,14 +41,6 @@ RAND=$$;
 # current host running script
 hostname=$(hostname -s)
 
-# Shard folder used by unison to sync files - this holds the status file as well as configuration backup
-# Can be set to anything but must exist on all nagios boxes and be accessible / writable / readable 
-# by the user running this script
-SYNC_PATH="/opt/nagios-sync"
-status_file="$SYNC_PATH/status.log"
-tmp_status="$SYNC_PATH/status.log.tmp"
-conf_backup="$SYNC_PATH/config_backup"
-
 # Actual nagios config files as well a master for fail safe - 
 # simply back up nagios.cfg as nagios.cfg.master on regular basis
 config_file="/etc/nagios/nagios.cfg"
@@ -68,6 +60,15 @@ REQUIREDUSER="nagios"
 # in my case I created our company name then each datacentre folder within it
 # /etc/nagios/objects/$company/datacentre1
 company="your_company";
+
+
+# Shard folder used by unison to sync files - this holds the status file as well as configuration backup
+# Can be set to anything but must exist on all nagios boxes and be accessible / writable / readable 
+# by the user running this script
+SYNC_PATH="/opt/nagios-sync"
+status_file="$SYNC_PATH/status.log"
+tmp_status="$SYNC_PATH/status.log.tmp"
+conf_backup="$SYNC_PATH/config_backup"
 
 
 #####################################
