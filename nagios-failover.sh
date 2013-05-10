@@ -90,10 +90,16 @@ up[2]="nagiosadmin:PASSWORD"
 nagios_url="/nagios/cgi-bin/status.cgi?hostgroup=all&style=hostdetail"
 
 ######################################
-
 # add sudo to some commands - change over if sudo is required
-sudo_cmd="";
-# sudo_cmd="sudo "
+#sudo_cmd="";
+sudo_cmd="sudo "
+
+
+# We will wait between 1 to 30  seconds before attempting to fail over 
+# This value has been set to ensure multiple nagios servers attempt at different times 
+FAILOVER_TIME=$((( $RANDOM % 30 )+1)); 
+# FAILOVER_TIME=$(( $RANDOM % 10 + 30 )); 
+
 
 
 # Ensure script is running as correct user
@@ -108,7 +114,6 @@ function sendemail () {
 	echo -e $msg|mail -s "$SUBJECT" $USERS
 }
 
-# the restart function moved out of script to allow you to set it as you like
 function restart_nag() { 
 	sudo /etc/init.d/nagios restart
 }
@@ -155,7 +160,17 @@ function check_nagios() {
 
 			# If return result is not 0 i.e. exist code if 0 has passed 
 			if [ $? -ne 0 ] ; then
+
 				msg=$msg" Nagios is down in $datacentre \n"
+
+				# Sleep for random seconds between 30-40 seconds to ensure 
+				# there is no overlap between multiple nagios servers
+				echo "Sleeping for $FAILOVER_TIME"
+				sleep $FAILOVER_TIME
+				# Now sync files again to ensure one Datacentre has not already taken over
+				# synchronise logs admin folder
+				sync_files;
+
 
 				# Check to see if $datacentre is already in the status log file
 				grep $datacentre $status_file > /dev/null
@@ -163,6 +178,8 @@ function check_nagios() {
 	  			if [ $? = 0 ]; then
 					# return which host took over 
 					thishost=$(grep $datacentre $status_file|awk '{print $2}')
+					#random_file=$(grep $datacentre $status_file|awk '{print $3}')
+                        		#msg=$msg" $datacentre is down and being monitored by $thishost \n"
 				else
 					grep "$company/$datacentre" $config_file > /dev/null
 					# check for config entry in config file and status 0 means found
@@ -170,6 +187,8 @@ function check_nagios() {
 						grep "$company/$datacentre" $config_file
 						msg=$msg" $datacentre has already been added to configuration - no need to set\n"
 					else
+
+
 						# this else is where config was not found and the host is down and was not in status file 
 						# so preparing to take over failed nagios host
 						msg=$msg" Backing up config to $conf_backup/nagios.cfg.$RAND \n"
