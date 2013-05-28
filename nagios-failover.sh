@@ -26,12 +26,6 @@
 # with a specific datacentre
 # */2 * * * * nagios /usr/local/bin/nagios-failover.sh >/dev/null 2>&1
 ##############################################################################
-# X Variable
-# If you extend the array below - please ensure you increment the value  
-# of X to the amount of Array id's created
-# This is very important and please also ensure Arrays s u and up all have the
-# same amount of ID's
-##############################################################################
 
 
 
