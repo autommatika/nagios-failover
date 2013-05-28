@@ -72,9 +72,6 @@ conf_backup="$SYNC_PATH/config_backup"
 
 
 #####################################
-# Amount of arrays rows below
-X=2;
-
 # Environments or Data Centres
 s[1]="datacentre1";
 s[2]="datacentre2";
@@ -94,13 +91,6 @@ nagios_url="/nagios/cgi-bin/status.cgi?hostgroup=all&style=hostdetail"
 # add sudo to some commands - change over if sudo is required
 #sudo_cmd="";
 sudo_cmd="sudo "
-
-
-# We will wait between 1 to 30  seconds before attempting to fail over 
-# This value has been set to ensure multiple nagios servers attempt at different times 
-FAILOVER_TIME=$((( $RANDOM % 30 )+1)); 
-# FAILOVER_TIME=$(( $RANDOM % 10 + 30 )); 
-
 
 
 # Ensure script is running as correct user
@@ -123,88 +113,94 @@ function restart_nag() {
 ## which in turn uses admin keys to ssh across
 function sync_files() { 
 	_unison=/usr/bin/unison
-	for ((i=1; i <= $X; i++)); do
- 		s=${u[$i]};
-		if [[ $s =~ $hostname ]]; then 
-			echo "ignoring $r matches $hostname";
+	for server in ${u[@]}; do
+		if [[ $server =~ $hostname ]]; then 
+			echo "ignoring $server matches $hostname";
 		else
 			for f in ${SYNC_PATH}; do
-        			${_unison} -batch "${f}"  "ssh://${s}/${f}"
+        			${_unison} -batch "${f}"  "ssh://${server}/${f}"
 			done
 		fi
 	done
 }
 
+URL_WORKING=0;
+function check_url() { 
+			# Check out datacentre 
+			echo "Health statistics of $datacentre"
+			# Run a url http check
+			echo "elinks --dump http://$userpass@$nagios_host/$nagios_url"
+			elinks --dump http://$userpass@$nagios_host/$nagios_url | grep "Host Status Details"  >/dev/null 2>&1
+			# If return result is not 0 i.e. exist code if 0 has passed 
+			if [ $? -ne 0 ] ; then
+				msg=$msg" Nagios is down in $datacentre \n"
+				URL_WORKKING=0;
+			else
+				URL_WORKING=1;
+			fi
+
+}
 function check_nagios() { 
 	# synchronise logs admin folder
 	sync_files;
 
 	# Go through the server array 
-  	for ((i=1; i <= $X; i++)); do
-
-		# For each array item expand members - these should map to each id above
-		datacentre=${s[$i]};
-		nagios_host=${u[$i]}
+	i=0;
+        for datacentre in ${s[@]}; do
+        	((i++))
+        	nagios_host=${u[$i]};
 		userpass=${up[$i]}
-		
+
 		# Check to see if the current nagios host matches this host
 		# if it does no point in script checking itself and trying to take over its own config
 		if [[ $nagios_host =~ $hostname ]]; then 
 			echo "$nagios_host matches $hostname ignoring $datacentre"
 		else
 
-			# Check out datacentre 
-			echo "Health statistics of $datacentre"
-
-			# Run a url http check
-			elinks --dump http://$userpass@$nagios_host/$nagios_url | grep "Host Status Details"  >/dev/null 2>&1
-
-			# If return result is not 0 i.e. exist code if 0 has passed 
-			if [ $? -ne 0 ] ; then
-
-				msg=$msg" Nagios is down in $datacentre \n"
-
+				check_url;
+				if [[ $URL_WORKING -lt 1 ]]; then
 				# Sleep for random seconds between 30-40 seconds to ensure 
 				# there is no overlap between multiple nagios servers
 				echo "Sleeping for $FAILOVER_TIME"
 				sleep $FAILOVER_TIME
-				# Now sync files again to ensure one Datacentre has not already taken over
-				# synchronise logs admin folder
-				sync_files;
+				echo "Checking URL Again";
+				check_url;
+				if [[ $URL_WORKING -lt 1 ]]; then
+					# Now sync files again to ensure one Datacentre has not already taken over
+					# synchronise logs admin folder
+					sync_files;
 
 
-				# Check to see if $datacentre is already in the status log file
-				grep $datacentre $status_file > /dev/null
-				# Exit code 0 - then it was found in status file
-	  			if [ $? = 0 ]; then
-					# return which host took over 
-					thishost=$(grep $datacentre $status_file|awk '{print $2}')
-					#random_file=$(grep $datacentre $status_file|awk '{print $3}')
-                        		#msg=$msg" $datacentre is down and being monitored by $thishost \n"
-				else
-					grep "$company/$datacentre" $config_file > /dev/null
-					# check for config entry in config file and status 0 means found
-					if [ $? = 0 ]; then
-						grep "$company/$datacentre" $config_file
-						msg=$msg" $datacentre has already been added to configuration - no need to set\n"
+					# Check to see if $datacentre is already in the status log file
+					grep $datacentre $status_file > /dev/null
+					# Exit code 0 - then it was found in status file
+	  				if [ $? = 0 ]; then
+						# return which host took over 
+						thishost=$(grep $datacentre $status_file|awk '{print $2}')
+						#random_file=$(grep $datacentre $status_file|awk '{print $3}')
+                        			#msg=$msg" $datacentre is down and being monitored by $thishost \n"
 					else
+						grep "$company/$datacentre" $config_file > /dev/null
+						# check for config entry in config file and status 0 means found
+						if [ $? = 0 ]; then
+							grep "$company/$datacentre" $config_file
+							msg=$msg" $datacentre has already been added to configuration - no need to set\n"
+						else
+							# this else is where config was not found and the host is down and was not in status file 
+							# so preparing to take over failed nagios host
+							msg=$msg" Backing up config to $conf_backup/nagios.cfg.$RAND \n"
+							# Back up existing config file to shared mount point
+							cp $config_file $conf_backup/nagios.cfg.$RAND
+							$sudo_cmd chown :nagios $conf_backup/nagios.cfg.$RAND
+							# store environemnt current host running script and the random id to status file
+							echo "$datacentre $hostname $RAND" >> $status_file
 
-
-						# this else is where config was not found and the host is down and was not in status file 
-						# so preparing to take over failed nagios host
-						msg=$msg" Backing up config to $conf_backup/nagios.cfg.$RAND \n"
-						# Back up existing config file to shared mount point
-						cp $config_file $conf_backup/nagios.cfg.$RAND
-						$sudo_cmd chown :nagios $conf_backup/nagios.cfg.$RAND
-						# store environemnt current host running script and the random id to status file
-						echo "$datacentre $hostname $RAND" >> $status_file
-
-						# Add the extra config to this nagios.cfg
-						config="# $datacentre servers - services\ncfg_dir=/etc/nagios/objects/$company/$datacentre"
-						content=$(echo -e $config)
-						line=$(grep -n "# AUTOMATION ADD HERE" $config_file|awk -F":" '{print $1}')
-						# Above gets it all ready below adds entry
-						edit=$($sudo_cmd ed -s $config_file << EOF
+							# Add the extra config to this nagios.cfg
+							config="# $datacentre servers - services\ncfg_dir=/etc/nagios/objects/$company/$datacentre"
+							content=$(echo -e $config)
+							line=$(grep -n "# AUTOMATION ADD HERE" $config_file|awk -F":" '{print $1}')
+							# Above gets it all ready below adds entry
+							edit=$($sudo_cmd ed -s $config_file << EOF
 $line
 a
 $content
@@ -213,20 +209,23 @@ w
 q
 EOF
 )
-						# Carry out work silently
-						$edit  >/dev/null 2>&1
-						# synchronise logs admin folder
-        					sync_files;
-						# Prepare further email content
-						msg=$msg" Adding $config to $config_file \n"
-						msg=$msg" Restarting Nagios\n"
+							# Carry out work silently
+							$edit  >/dev/null 2>&1
+							# synchronise logs admin folder
+        						sync_files;
+							# Prepare further email content
+							msg=$msg" Adding $config to $config_file \n"
+							msg=$msg" Restarting Nagios\n"
 
-						SUBJECT="$datacentre Nagios Failed over to $hostname"
-						# Send email
-						sendemail
-						#Restart nagios
-						restart_nag
+							SUBJECT="$datacentre Nagios Failed over to $hostname"
+							# Send email
+							sendemail
+							# Restart nagios
+							restart_nag
+						fi
 					fi
+				else
+					msg=msg" Datacenter URL has recovered"
 				fi
 			else
 
