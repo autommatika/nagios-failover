@@ -26,6 +26,24 @@
 # with a specific datacentre
 # */2 * * * * nagios /usr/local/bin/nagios-failover.sh >/dev/null 2>&1
 ##############################################################################
+# REQUIREMENTS:
+##############################################################################
+# yum install unison or apt-get install unison
+# timeout : (available on Debian/Ubuntu) on Centos:
+# cp /usr/share/doc/bash-3.2/scripts/timeout /usr/bin/timeout
+# chmod 755 /usr/bin/timeout
+
+# mkdir /opt/nagios-sync
+# chown -R nagios:nagios /opt/nagios-sync
+
+# on 1 nagios host run ssh-keygen and 
+# then scp .ssh folder to all the other nagios hosts 
+# or ssh-keygen and ssh-copy-id from each host to another
+
+# Finally run the script mannually to ensure it can ssh without a password 
+# and gives you verbosity as to what is going on
+##############################################################################
+
 
 
 
@@ -64,6 +82,13 @@ status_file="$SYNC_PATH/status.log"
 tmp_status="$SYNC_PATH/status.log.tmp"
 conf_backup="$SYNC_PATH/config_backup"
 
+# We will wait between 1 to 30  seconds before attempting to fail over 
+# This value has been set to ensure multiple nagios servers attempt at different times rather than simulatinous failover 
+FAILOVER_TIME=$((( $RANDOM % 30 )+1)); 
+# FAILOVER_TIME=$(( $RANDOM % 10 + 30 )); 
+
+
+
 
 #####################################
 # Environments or Data Centres
@@ -82,6 +107,8 @@ up[2]="nagiosadmin:PASSWORD"
 nagios_url="/nagios/cgi-bin/status.cgi?hostgroup=all&style=hostdetail"
 
 ######################################
+
+
 # add sudo to some commands - change over if sudo is required
 #sudo_cmd="";
 sudo_cmd="sudo "
@@ -112,25 +139,25 @@ function sync_files() {
 			echo "ignoring $server matches $hostname";
 		else
 			for f in ${SYNC_PATH}; do
-        			${_unison} -batch "${f}"  "ssh://${server}/${f}"
+        			timeout 5 ${_unison} -batch "${f}"  "ssh://${server}/${f}"
 			done
 		fi
 	done
 }
 
-URL_WORKING=0;
 function check_url() { 
+			URL_WORKING=0;
 			# Check out datacentre 
 			echo "Health statistics of $datacentre"
 			# Run a url http check
 			echo "elinks --dump http://$userpass@$nagios_host/$nagios_url"
-			elinks --dump http://$userpass@$nagios_host/$nagios_url | grep "Host Status Details"  >/dev/null 2>&1
+			timeout 10 elinks --dump "http://$userpass@$nagios_host/$nagios_url" | grep -q "Host Status Details" 
 			# If return result is not 0 i.e. exist code if 0 has passed 
-			if [ $? -ne 0 ] ; then
+			if [[ $? -eq 0  ]]; then
+				URL_WORKING=1;
+			else
 				msg=$msg" Nagios is down in $datacentre \n"
 				URL_WORKKING=0;
-			else
-				URL_WORKING=1;
 			fi
 
 }
@@ -152,14 +179,14 @@ function check_nagios() {
 		else
 
 				check_url;
-				if [[ $URL_WORKING -lt 1 ]]; then
+				if [[ $URL_WORKING -eq 0  ]]; then
 				# Sleep for random seconds between 30-40 seconds to ensure 
 				# there is no overlap between multiple nagios servers
 				echo "Sleeping for $FAILOVER_TIME"
 				sleep $FAILOVER_TIME
 				echo "Checking URL Again";
 				check_url;
-				if [[ $URL_WORKING -lt 1 ]]; then
+				if [[ $URL_WORKING -eq 0 ]]; then
 					# Now sync files again to ensure one Datacentre has not already taken over
 					# synchronise logs admin folder
 					sync_files;
